@@ -12,6 +12,7 @@ var colemak_rows = [
 var colemak_home = "arstneio";
 var stats = {};
 var stats_limit = 10;
+var streak = {current: 0, best: 0};
 var shifted_keys = {
     '~': '`', '!': '1', '@': '2', '#': '3', '$': '4', '%': '5', '^': '6',
     '&': '7', '*': '8', '(': '9', ')': '0', '_': '-', '+': '=',
@@ -32,6 +33,8 @@ $(document).ready(function() {
     $(document).keypress(keyHandler);
     $('#kb-toggle').click(toggle_keyboard);
     load_stats();
+    load_streak();
+    render_streak(false);
     $('#stats-toggle').click(toggle_stats);
     $('#stats-reset').click(reset_stats);
     try {
@@ -73,11 +76,13 @@ function keyHandler(e) {
     record_stat(data.word[data.word_index], key);
     if(key == data.word[data.word_index]) {
         data.in_a_row[key] += 1;
+        update_streak(true);
         (new Audio("click.wav")).play();
     }
     else {
         data.in_a_row[data.word[data.word_index]] = 0;
         data.in_a_row[key] = 0;
+        update_streak(false);
         (new Audio("clack.wav")).play();
         data.word_errors[data.word_index] = true;
     }
@@ -110,6 +115,40 @@ function record_stat(expected, typed) {
     }
     save_stats();
     render_stats();
+}
+
+
+function load_streak() {
+    try {
+        if (localStorage.streak != undefined) {
+            streak = JSON.parse(localStorage.streak);
+        }
+    } catch (e) {
+        streak = {current: 0, best: 0};
+    }
+}
+
+
+function update_streak(correct) {
+    var broken = !correct && streak.current > 0;
+    streak.current = correct ? streak.current + 1 : 0;
+    streak.best = Math.max(streak.best, streak.current);
+    try {
+        localStorage.streak = JSON.stringify(streak);
+    } catch (e) {}
+    render_streak(broken);
+}
+
+
+function render_streak(broken) {
+    $('#streak-count').text(streak.current);
+    $('#streak-best').text(streak.best);
+    var el = $('#streak');
+    el.removeClass('broken');
+    if (broken) {
+        el[0].offsetWidth;
+        el.addClass('broken');
+    }
 }
 
 

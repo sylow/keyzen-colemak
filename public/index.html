@@ -268,9 +268,50 @@
                 color: #a8a8a8;
             }
 
+            #streak {
+                position: fixed;
+                left: 50%;
+                bottom: 16px;
+                transform: translateX(-50%);
+                height: 28px;
+                line-height: 28px;
+                font-family: 'Ubuntu Mono', monospace;
+                font-size: 13px;
+                color: #a8a8a8;
+                white-space: nowrap;
+                user-select: none;
+            }
+
+            #streak-count {
+                font-size: 18px;
+                color: #7a7a7a;
+                vertical-align: -1px;
+            }
+
+            #streak .streak-best {
+                margin-left: 12px;
+            }
+
+            #streak.broken #streak-count {
+                animation: streak-broken 600ms ease-out;
+            }
+
+            @keyframes streak-broken {
+                from {
+                    color: #f78d1d;
+                }
+                to {
+                    color: #7a7a7a;
+                }
+            }
+
             @media (prefers-reduced-motion: reduce) {
                 .kb-key {
                     transition: none;
+                }
+
+                #streak.broken #streak-count {
+                    animation: none;
                 }
             }
 
@@ -312,6 +353,7 @@
             <div class='stats-head'><span>most missed</span><span id='stats-reset' title='Clear all stats'>reset</span></div>
             <div id='stats-list'></div>
         </div>
+        <div id='streak' title='Keys typed correctly since your last mistake'><span id='streak-count'>0</span> in a row<span class='streak-best'>best <span id='streak-best'>0</span></span></div>
         <div id='stats-toggle' title='Show most missed keys'>stats</div>
         <div id='kb-toggle' title='Show Colemak keyboard (Esc)'>kb</div>
 
