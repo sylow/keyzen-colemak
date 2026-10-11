@@ -264,6 +264,22 @@
                 width: 30px;
             }
 
+            #focus-weak {
+                margin-top: 8px;
+                color: #a8a8a8;
+                cursor: pointer;
+                user-select: none;
+            }
+
+            #focus-weak:hover {
+                color: #f78d1d;
+                text-decoration: underline;
+            }
+
+            #focus-weak.on #focus-weak-state {
+                color: #f78d1d;
+            }
+
             .stats-empty {
                 color: #a8a8a8;
             }
@@ -352,6 +368,7 @@
         <div id='stats'>
             <div class='stats-head'><span>most missed</span><span id='stats-reset' title='Clear all stats'>reset</span></div>
             <div id='stats-list'></div>
+            <div id='focus-weak' title='Show the keys you miss most a bit more often in practice words'>focus weak keys: <span id='focus-weak-state'>off</span></div>
         </div>
         <div id='streak' title='Keys typed correctly since your last mistake'><span id='streak-count'>0</span> in a row<span class='streak-best'>best <span id='streak-best'>0</span></span></div>
         <div id='stats-toggle' title='Show most missed keys'>stats</div>

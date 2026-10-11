@@ -13,6 +13,9 @@ var colemak_home = "arstneio";
 var stats = {};
 var stats_limit = 10;
 var streak = {current: 0, best: 0};
+var focus_weak = false;
+var focus_weak_share = 0.3;
+var focus_weak_boost = 4;
 var shifted_keys = {
     '~': '`', '!': '1', '@': '2', '#': '3', '$': '4', '%': '5', '^': '6',
     '&': '7', '*': '8', '(': '9', ')': '0', '_': '-', '+': '=',
@@ -37,6 +40,11 @@ $(document).ready(function() {
     render_streak(false);
     $('#stats-toggle').click(toggle_stats);
     $('#stats-reset').click(reset_stats);
+    try {
+        focus_weak = localStorage.focus_weak == "true";
+    } catch (e) {}
+    $('#focus-weak').click(toggle_focus_weak);
+    render_focus_weak();
     try {
         if (localStorage.stats_open == "true") {
             $('#stats').addClass('open');
@@ -149,6 +157,52 @@ function render_streak(broken) {
         el[0].offsetWidth;
         el.addClass('broken');
     }
+}
+
+
+function toggle_focus_weak() {
+    focus_weak = !focus_weak;
+    try {
+        localStorage.focus_weak = focus_weak;
+    } catch (e) {}
+    render_focus_weak();
+    data.word = generate_word();
+    data.word_index = 0;
+    data.keys_hit = "";
+    data.word_errors = {};
+    render();
+    save();
+}
+
+
+function render_focus_weak() {
+    $('#focus-weak-state').text(focus_weak ? "on" : "off");
+    $('#focus-weak').toggleClass('on', focus_weak);
+}
+
+
+function key_weight(k) {
+    var s = stats[k];
+    if (s == undefined) {
+        return 1;
+    }
+    return 1 + focus_weak_boost * s.misses / (s.hits + s.misses + 5);
+}
+
+
+function choose_weighted(a) {
+    var total = 0;
+    for (var i = 0; i < a.length; i++) {
+        total += key_weight(a[i]);
+    }
+    var r = Math.random() * total;
+    for (var i = 0; i < a.length; i++) {
+        r -= key_weight(a[i]);
+        if (r < 0) {
+            return a[i];
+        }
+    }
+    return a[a.length - 1];
 }
 
 
@@ -422,13 +476,19 @@ function render_word() {
 
 function generate_word() {
     word = '';
+    var pick = focus_weak ? choose_weighted : choose;
     for(var i = 0; i < data.word_length; i++) {
-        c = choose(get_training_chars());
+        if (focus_weak && Math.random() < focus_weak_share) {
+            c = choose_weighted(get_level_chars());
+        }
+        else {
+            c = pick(get_training_chars());
+        }
         if(c != undefined && c != word[word.length-1]) {
             word += c;
         }
         else {
-            word += choose(get_level_chars());
+            word += pick(get_level_chars());
         }
     }
     return word;
