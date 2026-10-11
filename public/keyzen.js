@@ -10,6 +10,8 @@ var colemak_rows = [
     "zxcvbkm,./"
 ];
 var colemak_home = "arstneio";
+var stats = {};
+var stats_limit = 10;
 var shifted_keys = {
     '~': '`', '!': '1', '@': '2', '#': '3', '$': '4', '%': '5', '^': '6',
     '&': '7', '*': '8', '(': '9', ')': '0', '_': '-', '+': '=',
@@ -29,6 +31,15 @@ $(document).ready(function() {
     }
     $(document).keypress(keyHandler);
     $('#kb-toggle').click(toggle_keyboard);
+    load_stats();
+    $('#stats-toggle').click(toggle_stats);
+    $('#stats-reset').click(reset_stats);
+    try {
+        if (localStorage.stats_open == "true") {
+            $('#stats').addClass('open');
+        }
+    } catch (e) {}
+    render_stats();
     $(document).keydown(function(e) {
         if (e.which == 27) {
             toggle_keyboard();
@@ -59,6 +70,7 @@ function keyHandler(e) {
         e.preventDefault();
     }
     data.keys_hit += key;
+    record_stat(data.word[data.word_index], key);
     if(key == data.word[data.word_index]) {
         data.in_a_row[key] += 1;
         (new Audio("click.wav")).play();
@@ -81,6 +93,115 @@ function keyHandler(e) {
     }
     render();
     save();
+}
+
+
+function record_stat(expected, typed) {
+    if (stats[expected] == undefined) {
+        stats[expected] = {hits: 0, misses: 0, typed: {}};
+    }
+    var s = stats[expected];
+    if (typed == expected) {
+        s.hits += 1;
+    }
+    else {
+        s.misses += 1;
+        s.typed[typed] = (s.typed[typed] || 0) + 1;
+    }
+    save_stats();
+    render_stats();
+}
+
+
+function load_stats() {
+    try {
+        if (localStorage.stats != undefined) {
+            stats = JSON.parse(localStorage.stats);
+        }
+    } catch (e) {
+        stats = {};
+    }
+}
+
+
+function save_stats() {
+    try {
+        localStorage.stats = JSON.stringify(stats);
+    } catch (e) {}
+}
+
+
+function reset_stats() {
+    stats = {};
+    save_stats();
+    render_stats();
+}
+
+
+function toggle_stats() {
+    $('#stats').toggleClass('open');
+    try {
+        localStorage.stats_open = $('#stats').hasClass('open');
+    } catch (e) {}
+}
+
+
+function key_label(k) {
+    if (k == ' ') {
+        return "&#9141;";
+    }
+    if (k == '\r' || k == '\n') {
+        return "&#8629;";
+    }
+    return $('<span>').text(k).html();
+}
+
+
+function render_stats() {
+    var missed = [];
+    for (var k in stats) {
+        if (stats[k].misses > 0) {
+            missed.push(k);
+        }
+    }
+    missed.sort(function(a, b) {
+        var sa = stats[a], sb = stats[b];
+        if (sb.misses != sa.misses) {
+            return sb.misses - sa.misses;
+        }
+        return sb.misses / (sb.hits + sb.misses) - sa.misses / (sa.hits + sa.misses);
+    });
+    if (missed.length == 0) {
+        $('#stats-list').html("<div class='stats-empty'>No mistakes yet.</div>");
+        return;
+    }
+    var most = stats[missed[0]].misses;
+    var html = "";
+    for (var i = 0; i < Math.min(missed.length, stats_limit); i++) {
+        var k = missed[i];
+        var s = stats[k];
+        var accuracy = Math.round(100 * s.hits / (s.hits + s.misses));
+        var instead = null;
+        for (var t in s.typed) {
+            if (instead == null || s.typed[t] > s.typed[instead]) {
+                instead = t;
+            }
+        }
+        var name = k == ' ' ? "space" : k;
+        var tip = name + ": missed " + s.misses + " times, " + accuracy + "% accurate";
+        if (instead != null) {
+            tip += ", usually typed " + (instead == ' ' ? "space" : instead) + " instead";
+        }
+        html += "<div class='stats-row' title='" + $('<span>').text(tip).html().replace(/'/g, "&#39;") + "'>";
+        html += "<span class='stats-rank'>" + (i + 1) + "</span>";
+        html += "<span class='kb-key'>" + key_label(k) + "</span>";
+        html += "<span class='stats-bar'><span style='width: " + Math.round(100 * s.misses / most) + "%'></span></span>";
+        html += "<span class='stats-num'>" + s.misses + "&times;</span>";
+        html += "<span class='stats-num'>" + accuracy + "%</span>";
+        html += "<span class='stats-instead'>" + (instead == null ? "" : "&rarr; " + key_label(instead)) + "</span>";
+        html += "</div>";
+    }
+    $('#stats-list').html(html);
 }
 
 
