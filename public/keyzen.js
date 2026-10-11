@@ -3,8 +3,23 @@ data.chars = " ntesiroahdjglpufywqbkvmcxz1234567890'\",.!?:;/@$%&#*()_ABCDEFGHIJ
 data.consecutive = 10;
 data.word_length = 7;
 
+var colemak_rows = [
+    "`1234567890-=",
+    "qwfpgjluy;[]\\",
+    "arstdhneio'",
+    "zxcvbkm,./"
+];
+var colemak_home = "arstneio";
+var shifted_keys = {
+    '~': '`', '!': '1', '@': '2', '#': '3', '$': '4', '%': '5', '^': '6',
+    '&': '7', '*': '8', '(': '9', ')': '0', '_': '-', '+': '=',
+    '{': '[', '}': ']', '|': '\\', ':': ';', '"': "'",
+    '<': ',', '>': '.', '?': '/'
+};
+
 
 $(document).ready(function() {
+    build_keyboard();
     if (localStorage.data != undefined) {
         load();
         render();
@@ -13,6 +28,12 @@ $(document).ready(function() {
         set_level(1);
     }
     $(document).keypress(keyHandler);
+    $('#kb-toggle').click(toggle_keyboard);
+    $(document).keydown(function(e) {
+        if (e.which == 27) {
+            toggle_keyboard();
+        }
+    });
 });
 
 
@@ -86,6 +107,71 @@ function render() {
     render_level();
     render_word();
     render_level_bar();
+    render_keyboard();
+}
+
+
+function build_keyboard() {
+    var indents = [0, 12, 18, 0];
+    var html = "";
+    for (var r = 0; r < colemak_rows.length; r++) {
+        html += "<div class='kb-row' style='padding-left: " + indents[r] + "px'>";
+        if (r == 3) {
+            html += "<span class='kb-key' data-key='shift' style='width: 40px'>&#8679;</span>";
+        }
+        for (var i = 0; i < colemak_rows[r].length; i++) {
+            var k = colemak_rows[r][i];
+            var cls = "kb-key";
+            if (colemak_home.indexOf(k) > -1) {
+                cls += " home";
+            }
+            if (k == "t" || k == "n") {
+                cls += " bump";
+            }
+            html += "<span class='" + cls + "' data-key='" + (k == "'" ? "&#39;" : k) + "'>" + $('<span>').text(k).html() + "</span>";
+        }
+        if (r == 3) {
+            html += "<span class='kb-key' data-key='shift' style='width: 40px'>&#8679;</span>";
+        }
+        html += "</div>";
+    }
+    html += "<div class='kb-row' style='justify-content: center'><span class='kb-key' data-key=' ' style='width: 150px'>&nbsp;</span></div>";
+    $('#keyboard').html(html);
+    try {
+        if (localStorage.keyboard_open == "true") {
+            $('#keyboard').addClass('open');
+        }
+    } catch (e) {}
+}
+
+
+function toggle_keyboard() {
+    $('#keyboard').toggleClass('open');
+    try {
+        localStorage.keyboard_open = $('#keyboard').hasClass('open');
+    } catch (e) {}
+}
+
+
+function render_keyboard() {
+    $('#keyboard .kb-key').removeClass('next');
+    var c = data.word[data.word_index];
+    if (c == undefined) {
+        return;
+    }
+    var base = c;
+    var shift = false;
+    if (shifted_keys[c] != undefined) {
+        base = shifted_keys[c];
+        shift = true;
+    }
+    else if (c != c.toLowerCase()) {
+        base = c.toLowerCase();
+        shift = true;
+    }
+    $('#keyboard .kb-key').filter(function() {
+        return $(this).attr('data-key') == base || (shift && $(this).attr('data-key') == 'shift');
+    }).addClass('next');
 }
 
 
