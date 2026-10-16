@@ -22,9 +22,13 @@ var shifted_keys = {
     '{': '[', '}': ']', '|': '\\', ':': ';', '"': "'",
     '<': ',', '>': '.', '?': '/'
 };
+var sound_files = {click: "click.wav", clack: "clack.wav", ding: "ding.wav"};
+var audio_ctx = null;
+var sound_buffers = {};
 
 
 $(document).ready(function() {
+    load_sounds();
     build_keyboard();
     if (localStorage.data != undefined) {
         load();
@@ -80,18 +84,18 @@ function keyHandler(e) {
     if (data.chars.indexOf(key) > -1){
         e.preventDefault();
     }
+    var correct = key == data.word[data.word_index];
+    play_sound(correct ? "click" : "clack");
     data.keys_hit += key;
     record_stat(data.word[data.word_index], key);
-    if(key == data.word[data.word_index]) {
+    if(correct) {
         data.in_a_row[key] += 1;
         update_streak(true);
-        (new Audio("click.wav")).play();
     }
     else {
         data.in_a_row[data.word[data.word_index]] = 0;
         data.in_a_row[key] = 0;
         update_streak(false);
-        (new Audio("clack.wav")).play();
         data.word_errors[data.word_index] = true;
     }
     data.word_index += 1;
@@ -106,6 +110,43 @@ function keyHandler(e) {
     }
     render();
     save();
+}
+
+
+function load_sounds() {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) {
+        return;
+    }
+    audio_ctx = new Ctx();
+    $.each(sound_files, function(name, url) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", url);
+        xhr.responseType = "arraybuffer";
+        xhr.onload = function() {
+            audio_ctx.decodeAudioData(xhr.response, function(buffer) {
+                sound_buffers[name] = buffer;
+            }, function() {});
+        };
+        xhr.send();
+    });
+}
+
+
+function play_sound(name) {
+    var buffer = sound_buffers[name];
+    if (!buffer) {
+        // Not decoded yet, or Web Audio unavailable (e.g. opened via file://)
+        (new Audio(sound_files[name])).play();
+        return;
+    }
+    if (audio_ctx.state == "suspended") {
+        audio_ctx.resume();
+    }
+    var source = audio_ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audio_ctx.destination);
+    source.start(0);
 }
 
 
@@ -300,7 +341,7 @@ function render_stats() {
 
 function level_up() {
     if (data.level + 1 <= data.chars.length - 1) {
-        (new Audio('ding.wav')).play();
+        play_sound("ding");
     }
     l = Math.min(data.level + 1, data.chars.length);
     set_level(l);
